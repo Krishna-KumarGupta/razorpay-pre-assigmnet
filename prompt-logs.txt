@@ -195,3 +195,39 @@ Default status:
 PENDING
 
 Generate repository, service, controller and routes.
+
+
+
+Prompt 8 — Approval Workflow
+Implement reimbursement approval workflow.
+
+PATCH /rest/reimbursements
+
+Roles allowed:
+
+RM
+APE
+CFO
+
+Actions:
+
+APPROVED
+REJECTED
+
+Rules:
+
+RM approval recorded separately.
+
+APE approval recorded separately.
+
+Final reimbursement status becomes APPROVED only when:
+
+RM approved
+AND
+At least one APE approved
+
+Any rejection causes final status to become REJECTED.
+
+Maintain approval history table.
+
+Follow SOLID principles.
