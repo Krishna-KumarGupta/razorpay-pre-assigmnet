@@ -4,6 +4,7 @@ const express = require('express');
 
 const onboardingRoutes = require('./onboarding.routes');
 const roleRoutes = require('./role.routes');
+const employeeRoutes = require('./employee.routes');
 
 const router = express.Router();
 
@@ -11,13 +12,13 @@ const router = express.Router();
  * REST API router
  * Mounted at /rest in app.js
  *
- * Follows the Open/Closed Principle: new feature routers are registered here
- * without touching app.js.
+ * Open/Closed Principle: add new feature routers here without touching app.js.
  *
- * Namespace       │ Router file
- * ────────────────┼────────────────────────
- * /onboardings    │ onboarding.routes.js
- * /roles          │ role.routes.js
+ * Namespace       │ Router file               │ Description
+ * ────────────────┼───────────────────────────┼──────────────────────────────
+ * /onboardings    │ onboarding.routes.js       │ Register / Login / Logout
+ * /roles          │ role.routes.js             │ CFO: assign user roles
+ * /employees      │ employee.routes.js         │ CFO: assign/remove EMP→RM
  */
 router.get('/', (_req, res) => {
   res.json({
@@ -29,5 +30,6 @@ router.get('/', (_req, res) => {
 
 router.use('/onboardings', onboardingRoutes);
 router.use('/roles', roleRoutes);
+router.use('/employees', employeeRoutes);
 
 module.exports = router;

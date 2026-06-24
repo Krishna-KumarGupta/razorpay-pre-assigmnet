@@ -152,3 +152,25 @@ repository
 controller
 
 Follow RBAC principles.
+
+
+Prompt 6 — Employee Assignment
+Implement:
+
+POST /rest/employees/assign
+DELETE /rest/employees/assign
+
+Requirements:
+
+Only CFO can access.
+
+Assign EMP to RM.
+
+Validation:
+
+- User must exist
+- Employee role must be EMP
+- Manager role must be RM
+- Employee can have only one RM
+
+Generate repository, service, controller and routes.
