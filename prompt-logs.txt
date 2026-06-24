@@ -174,3 +174,24 @@ Validation:
 - Employee can have only one RM
 
 Generate repository, service, controller and routes.
+
+
+Prompt 7 — Reimbursement Creation
+Implement:
+
+POST /rest/reimbursements
+
+Requirements:
+
+Only EMP can create reimbursement.
+
+Fields:
+
+title
+description
+amount
+
+Default status:
+PENDING
+
+Generate repository, service, controller and routes.
