@@ -231,3 +231,25 @@ Any rejection causes final status to become REJECTED.
 Maintain approval history table.
 
 Follow SOLID principles.
+
+
+Prompt 9 — Employee Listing
+Implement:
+
+GET /rest/employees
+
+Visibility rules:
+
+RM:
+Only direct employees.
+
+APE:
+All EMP and RM users.
+
+CFO:
+All users.
+
+EMP:
+Forbidden.
+
+Generate optimized queries.

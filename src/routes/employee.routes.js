@@ -3,7 +3,8 @@
 const express = require('express');
 
 const employeeAssignmentController = require('../controllers/employeeAssignment.controller');
-const { authenticate, requireCFO } = require('../middleware/auth');
+const employeeListController = require('../controllers/employeeList.controller');
+const { authenticate, authorize, requireCFO } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const {
   assignEmployeeSchema,
@@ -13,41 +14,56 @@ const {
 const router = express.Router();
 
 /**
- * Employee Assignment Routes
+ * Employee Routes
  * Base path: /rest/employees   (mounted in src/routes/rest.js)
  *
  * RBAC matrix:
- * ┌──────────────────────────────────────────────────────────────────────────────┐
- * │ Method │ Path     │ Middleware chain                           │ Who         │
- * ├────────┼──────────┼───────────────────────────────────────────┼─────────────┤
- * │ POST   │ /assign  │ authenticate → requireCFO → validate       │ CFO only    │
- * │ DELETE │ /assign  │ authenticate → requireCFO → validate       │ CFO only    │
- * └────────┴──────────┴───────────────────────────────────────────┴─────────────┘
+ * ┌───────────────────────────────────────────────────────────────────────────────────┐
+ * │ Method │ Path     │ Middleware chain                          │ Who               │
+ * ├────────┼──────────┼──────────────────────────────────────────┼───────────────────┤
+ * │ GET    │ /        │ authenticate → authorize(RM,APE,CFO)      │ RM | APE | CFO    │
+ * │ POST   │ /assign  │ authenticate → requireCFO → validate      │ CFO only          │
+ * │ DELETE │ /assign  │ authenticate → requireCFO → validate      │ CFO only          │
+ * └────────┴──────────┴──────────────────────────────────────────┴───────────────────┘
  *
- * Middleware execution order (left → right):
- *  1. authenticate              – JWT cookie → req.user
- *  2. requireCFO                – RBAC gate; rejects non-CFO with 403
- *  3. assignEmployee/removeEmployee Schema – express-validator chains
- *  4. validate                  – collect errors → 422 ValidationError
- *  5. controller method         – delegates to EmployeeAssignmentService
+ * Visibility rules enforced in EmployeeListService (not middleware):
+ *  RM  → own direct reports only (INNER JOIN on employee_managers)
+ *  APE → all EMP and RM users    (WHERE role IN ('EMP','RM'))
+ *  CFO → all users               (full scan, paginated)
+ *  EMP → blocked by authorize() → 403 Forbidden
  */
 
-// Apply authenticate + requireCFO to every route in this router
-router.use(authenticate, requireCFO);
+// ── GET / – Role-scoped employee listing ─────────────────────────────────────
+
+/**
+ * @route   GET /rest/employees
+ * @desc    Fetch users visible to the requesting actor (role-scoped)
+ * @access  Private – RM | APE | CFO
+ * @query   page (CFO only, default 1), limit (CFO only, default 50, max 100)
+ *
+ * Response shape:
+ *  RM  / APE → { employees: [...], total: n }
+ *  CFO       → paginated envelope { data: [...], meta: { pagination: {...} } }
+ */
+router.get(
+  '/',
+  authenticate,
+  authorize('RM', 'APE', 'CFO'),   // EMP is explicitly excluded here (→ 403)
+  employeeListController.list
+);
+
+// ── CFO: Assignment management ────────────────────────────────────────────────
 
 /**
  * @route   POST /rest/employees/assign
  * @desc    Assign an EMP to an RM (CFO only)
  * @access  Private – CFO
  * @body    { employeeId: UUID, managerId: UUID, remarks?: string }
- *
- * Behaviour:
- *  - If the exact EMP→RM pair is already active → 200 no-op response
- *  - If EMP has a different active RM     → deactivate old, create new → 201
- *  - If EMP has no active assignment      → create new → 201
  */
 router.post(
   '/assign',
+  authenticate,
+  requireCFO,
   assignEmployeeSchema,
   validate,
   employeeAssignmentController.assign
@@ -58,13 +74,11 @@ router.post(
  * @desc    Remove the active EMP→RM assignment (soft-deactivate) (CFO only)
  * @access  Private – CFO
  * @body    { employeeId: UUID }
- *
- * Behaviour:
- *  - Soft-deactivates the active assignment row (history preserved)
- *  - Returns 404 if no active assignment exists
  */
 router.delete(
   '/assign',
+  authenticate,
+  requireCFO,
   removeEmployeeSchema,
   validate,
   employeeAssignmentController.remove
