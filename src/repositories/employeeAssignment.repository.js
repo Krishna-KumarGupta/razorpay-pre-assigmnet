@@ -1,8 +1,7 @@
 'use strict';
 
 const BaseRepository = require('./base.repository');
-const EmployeeManager = require('../models/employeeManager.model');
-const User = require('../models/user.model');
+const { EmployeeManager, User } = require('../models');
 
 /**
  * EmployeeAssignmentRepository – data-access layer for employee→manager assignments.

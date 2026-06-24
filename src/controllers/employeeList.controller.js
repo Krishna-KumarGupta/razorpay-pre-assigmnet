@@ -31,23 +31,17 @@ class EmployeeListController {
 
     const result = await employeeListService.listEmployees(actorId, actorRole, { page, limit });
 
-    // CFO gets a paginated envelope; RM and APE get a simple success envelope
-    if (actorRole === 'CFO') {
-      return sendPaginated(
-        res,
-        result.data,
-        result.total,
-        result.page,
-        result.limit,
-        'Employee list fetched successfully.'
-      );
-    }
+    const users = result.data.map(u => ({
+      userId: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+    }));
 
-    return sendSuccess(
-      res,
-      { employees: result.data, total: result.total },
-      'Employee list fetched successfully.'
-    );
+    return res.status(200).json({
+      status: 'success',
+      data: { users },
+    });
   });
 }
 

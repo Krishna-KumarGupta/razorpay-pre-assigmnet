@@ -1,7 +1,7 @@
 'use strict';
 
 const BaseRepository = require('./base.repository');
-const ReimbursementApproval = require('../models/reimbursementApproval.model');
+const { ReimbursementApproval } = require('../models');
 
 /**
  * ApprovalRepository – data-access layer for the ReimbursementApproval model.
@@ -109,6 +109,25 @@ class ApprovalRepository extends BaseRepository {
   async findLatestByLevel(reimbursementId, level) {
     return this.model.findOne({
       where: { reimbursementId, approvalLevel: level },
+      order: [['action_at', 'DESC']],
+    });
+  }
+
+  /**
+   * Check if a specific approver has already acted on a reimbursement
+   * at a given approval level.
+   *
+   * Used to prevent the same person from submitting duplicate approval actions.
+   * Different APEs are each allowed to approve independently.
+   *
+   * @param {string} reimbursementId
+   * @param {string} approverId
+   * @param {'RM' | 'APE' | 'CFO'} level
+   * @returns {Promise<ReimbursementApproval|null>}
+   */
+  async findByApproverAndLevel(reimbursementId, approverId, level) {
+    return this.model.findOne({
+      where: { reimbursementId, approverId, approvalLevel: level },
       order: [['action_at', 'DESC']],
     });
   }

@@ -113,8 +113,19 @@ User.init(
       attributes: { exclude: ['password', 'refreshToken'] },
     },
     scopes: {
-      withPassword: { attributes: { include: ['password'] } },
-      withRefreshToken: { attributes: { include: ['refreshToken'] } },
+      /**
+       * Returns the user WITH the password column included.
+       * Using exclude:[] explicitly overrides the defaultScope's
+       * exclude:['password','refreshToken'] — Sequelize 6 merges scopes and
+       * the defaultScope exclude takes precedence over include in named scopes,
+       * so we must use a full attribute override here.
+       */
+      withPassword: {
+        attributes: { exclude: ['refreshToken'] },  // All fields except refreshToken
+      },
+      withRefreshToken: {
+        attributes: { exclude: ['password'] },       // All fields except password
+      },
       active: { where: { isActive: true } },
       employees: { where: { role: 'EMP' } },
       managers: { where: { role: 'RM' } },

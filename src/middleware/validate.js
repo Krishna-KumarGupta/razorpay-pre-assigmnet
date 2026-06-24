@@ -24,10 +24,10 @@ const validate = (req, _res, next) => {
       value: err.value,
     }));
 
-    throw new ValidationError('Input validation failed', details);
+    return next(new ValidationError('Input validation failed', details));
   }
 
-  next();
+  return next();
 };
 
 module.exports = validate;

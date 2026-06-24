@@ -87,8 +87,9 @@ const setRefreshTokenCookie = (res, token) => {
  * @param {import('express').Response} res
  */
 const clearTokenCookies = (res) => {
-  res.clearCookie('access_token', { path: '/' });
-  res.clearCookie('refresh_token', { path: '/api/v1/auth/refresh' });
+  const clearOptions = { path: '/', httpOnly: true };
+  res.clearCookie('access_token', clearOptions);
+  res.clearCookie('refresh_token', clearOptions);
 };
 
 module.exports = {

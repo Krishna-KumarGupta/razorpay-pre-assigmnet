@@ -44,10 +44,7 @@ const authorize = (...roles) =>
     }
 
     if (!roles.includes(req.user.role)) {
-      throw new ForbiddenError(
-        `Access denied. Required role(s): [${roles.join(', ')}]. ` +
-        `Your role: ${req.user.role}.`
-      );
+      throw new ForbiddenError('Access denied. You do not have permission to perform this action.');
     }
 
     next();

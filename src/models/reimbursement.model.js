@@ -19,11 +19,24 @@ const { sequelize } = require('../config/database');
  *   CANCELLED   → withdrawn by employee before first approval (terminal)
  */
 class Reimbursement extends Model {
-  /** Convenience check: is the claim still in flight? */
+  /**
+   * Convenience check: is the claim still in flight (not yet in a terminal state)?
+   *
+   * Terminal states are those from which no further transitions are possible:
+   *  – All *_REJECTED statuses
+   *  – CFO_APPROVED  (fully approved; cleared for payment)
+   *  – PAID           (payment released)
+   *  – CANCELLED      (withdrawn by employee)
+   */
   isPending() {
-    return !['RM_REJECTED', 'APE_REJECTED', 'CFO_REJECTED', 'PAID', 'CANCELLED'].includes(
-      this.status
-    );
+    return ![
+      'RM_REJECTED',
+      'APE_REJECTED',
+      'CFO_REJECTED',
+      'CFO_APPROVED',
+      'PAID',
+      'CANCELLED',
+    ].includes(this.status);
   }
 }
 
@@ -96,7 +109,7 @@ Reimbursement.init(
         'CANCELLED'
       ),
       allowNull: false,
-      defaultValue: 'DRAFT',
+      defaultValue: 'PENDING',  // Spec: newly created claims are immediately PENDING
       comment: 'Current lifecycle state of the reimbursement',
     },
     receiptUrl: {

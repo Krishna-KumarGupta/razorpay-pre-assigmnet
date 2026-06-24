@@ -45,35 +45,20 @@ class EmployeeListService {
 
       // ── RM: only their own direct reports ──────────────────────────────────
       case 'RM': {
-        const users = await employeeListRepository.findDirectReports(actorId);
-        return {
-          data:  users,
-          total: users.length,
-          page:  1,
-          limit: users.length,
-        };
+        const { count, rows } = await employeeListRepository.findDirectReports(actorId, { page, limit });
+        return { data: rows, total: count, page, limit };
       }
 
       // ── APE: all EMP and RM users ──────────────────────────────────────────
       case 'APE': {
-        const users = await employeeListRepository.findEmpAndRmUsers();
-        return {
-          data:  users,
-          total: users.length,
-          page:  1,
-          limit: users.length,
-        };
+        const { count, rows } = await employeeListRepository.findEmpAndRmUsers({ page, limit });
+        return { data: rows, total: count, page, limit };
       }
 
       // ── CFO: all users with pagination ────────────────────────────────────
       case 'CFO': {
         const { count, rows } = await employeeListRepository.findAllUsers({ page, limit });
-        return {
-          data:  rows,
-          total: count,
-          page,
-          limit,
-        };
+        return { data: rows, total: count, page, limit };
       }
 
       // ── EMP / unknown: forbidden ──────────────────────────────────────────

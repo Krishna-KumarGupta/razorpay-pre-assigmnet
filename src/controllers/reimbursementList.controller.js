@@ -35,14 +35,23 @@ class ReimbursementListController {
       actorId, actorRole, { page, limit }
     );
 
-    return sendPaginated(
-      res,
-      result.data,
-      result.total,
-      result.page,
-      result.limit,
-      'Reimbursements fetched successfully.'
-    );
+    const mapStatus = (status) => {
+      if (['PENDING', 'RM_APPROVED'].includes(status)) return 'PENDING';
+      if (['APE_APPROVED', 'CFO_APPROVED', 'PAID'].includes(status)) return 'APPROVED';
+      return 'REJECTED';
+    };
+
+    const reimbursements = result.data.map(r => ({
+      title: r.title,
+      description: r.description,
+      amount: Number(r.amount),
+      status: mapStatus(r.status),
+    }));
+
+    return res.status(200).json({
+      status: 'success',
+      data: { reimbursements },
+    });
   });
 
   /**
@@ -62,14 +71,23 @@ class ReimbursementListController {
       actorId, actorRole, targetUserId, { page, limit }
     );
 
-    return sendPaginated(
-      res,
-      result.data,
-      result.total,
-      result.page,
-      result.limit,
-      `Reimbursements for employee "${targetUserId}" fetched successfully.`
-    );
+    const mapStatus = (status) => {
+      if (['PENDING', 'RM_APPROVED'].includes(status)) return 'PENDING';
+      if (['APE_APPROVED', 'CFO_APPROVED', 'PAID'].includes(status)) return 'APPROVED';
+      return 'REJECTED';
+    };
+
+    const reimbursements = result.data.map(r => ({
+      title: r.title,
+      description: r.description,
+      amount: Number(r.amount),
+      status: mapStatus(r.status),
+    }));
+
+    return res.status(200).json({
+      status: 'success',
+      data: { reimbursements },
+    });
   });
 }
 

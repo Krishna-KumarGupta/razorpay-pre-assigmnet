@@ -3,10 +3,11 @@
 require('dotenv').config();
 const http = require('http');
 const app = require('./app');
-const { connectDatabase } = require('./config/database');
+const { connectDatabase, sequelize } = require('./config/database');
 const logger = require('./utils/logger');
 
 const PORT = process.env.PORT || 7002;
+let server;
 
 /**
  * Normalize port into a number, string, or false.
@@ -60,17 +61,26 @@ async function startServer() {
     const port = normalizePort(PORT);
     app.set('port', port);
 
-    const server = http.createServer(app);
+    server = http.createServer(app);
 
     server.listen(port);
     server.on('error', onError);
     server.on('listening', onListening);
 
-    // Graceful shutdown
+    // Graceful shutdown: close HTTP server first, then close the DB pool.
+    // Without closing the pool, the DB server must wait for its idle timeout
+    // to reclaim connections after the process exits.
     const shutdown = async (signal) => {
       logger.info(`${signal} received. Shutting down gracefully...`);
-      server.close(() => {
+
+      server.close(async () => {
         logger.info('HTTP server closed.');
+        try {
+          await sequelize.close();
+          logger.info('Database connection pool closed.');
+        } catch (err) {
+          logger.error('Error closing database pool:', err);
+        }
         process.exit(0);
       });
 

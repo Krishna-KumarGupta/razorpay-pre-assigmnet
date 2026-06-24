@@ -63,6 +63,15 @@ const errorHandler = (err, req, res, _next) => {
     message = 'Operation violates a foreign key constraint';
   }
 
+  // ── Sequelize Database Error (connection issues, query failures, etc.) ────────
+  // This catches generic DB errors (e.g. connection pool exhaustion, bad queries).
+  // We intentionally suppress the raw message to prevent DB internals from leaking.
+  if (err instanceof Sequelize.DatabaseError && !(err instanceof Sequelize.ValidationError) && !(err instanceof Sequelize.UniqueConstraintError) && !(err instanceof Sequelize.ForeignKeyConstraintError)) {
+    statusCode = 503;
+    code = 'DATABASE_ERROR';
+    message = 'A database error occurred. Please try again later.';
+  }
+
   // ── JWT Errors ───────────────────────────────────────────────────────────────
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;

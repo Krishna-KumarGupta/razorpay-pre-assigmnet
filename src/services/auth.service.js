@@ -44,7 +44,11 @@ class AuthService {
    * @throws {ConflictError} if email is already registered
    */
   async register(dto) {
-    const { name, email, password, role = 'EMP' } = dto;
+    const { name, email, password } = dto;
+
+    // Role is always EMP on registration.
+    // Elevation to RM / APE / CFO requires POST /rest/roles/assign (CFO-gated).
+    const role = 'EMP';
 
     // 1. Duplicate check
     const existing = await userRepository.findByEmail(email);

@@ -2,8 +2,7 @@
 
 const { Op } = require('sequelize');
 const BaseRepository = require('./base.repository');
-const User = require('../models/user.model');
-const EmployeeManager = require('../models/employeeManager.model');
+const { User, EmployeeManager } = require('../models');
 
 /**
  * EmployeeListRepository – optimised read queries for the GET /rest/employees endpoint.
@@ -29,10 +28,12 @@ class EmployeeListRepository extends BaseRepository {
    * the join O(n) rather than O(n²).
    *
    * @param {string} managerId   – ID of the logged-in RM
-   * @returns {Promise<User[]>}  – active direct reports (role = EMP)
+   * @param {{ page?: number, limit?: number }} opts
+   * @returns {Promise<{ count: number, rows: User[] }>}
    */
-  async findDirectReports(managerId) {
-    return User.findAll({
+  async findDirectReports(managerId, { page = 1, limit = 50 } = {}) {
+    return User.findAndCountAll({
+      where: { isActive: true },  // Only return active employees (guard against deactivated users whose assignment is still present)
       include: [
         {
           model: EmployeeManager,
@@ -47,6 +48,9 @@ class EmployeeListRepository extends BaseRepository {
       ],
       attributes: { exclude: ['password', 'refreshToken', 'passwordChangedAt'] },
       order: [['name', 'ASC']],
+      limit,
+      offset: (page - 1) * limit,
+      distinct: true,
     });
   }
 
@@ -56,10 +60,11 @@ class EmployeeListRepository extends BaseRepository {
    * Strategy: simple WHERE clause on the role ENUM column, which is indexed.
    * No join required; expected to be fast even at large user counts.
    *
-   * @returns {Promise<User[]>}
+   * @param {{ page?: number, limit?: number }} opts
+   * @returns {Promise<{ count: number, rows: User[] }>}
    */
-  async findEmpAndRmUsers() {
-    return User.findAll({
+  async findEmpAndRmUsers({ page = 1, limit = 50 } = {}) {
+    return User.findAndCountAll({
       where: {
         role: { [Op.in]: ['EMP', 'RM'] },
         isActive: true,
@@ -69,6 +74,8 @@ class EmployeeListRepository extends BaseRepository {
         ['role', 'ASC'],   // EMP first, then RM
         ['name', 'ASC'],
       ],
+      limit,
+      offset: (page - 1) * limit,
     });
   }
 

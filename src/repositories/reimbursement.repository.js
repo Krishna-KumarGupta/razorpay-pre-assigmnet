@@ -2,9 +2,7 @@
 
 const { Op } = require('sequelize');
 const BaseRepository = require('./base.repository');
-const Reimbursement = require('../models/reimbursement.model');
-const EmployeeManager = require('../models/employeeManager.model');
-const User = require('../models/user.model');
+const { Reimbursement, EmployeeManager, User } = require('../models');
 
 /**
  * ReimbursementRepository – data-access layer for the Reimbursement model.
@@ -47,8 +45,23 @@ class ReimbursementRepository extends BaseRepository {
   }
 
   /**
+   * Find a reimbursement by employee and status.
+   * @param {string} employeeId
+   * @param {string} status
+   * @returns {Promise<Reimbursement|null>}
+   */
+  async findPendingByEmployeeAndStatus(employeeId, status) {
+    return this.model.findOne({
+      where: { employeeId, status }
+    });
+  }
+
+  /**
    * EMP – own reimbursements, all statuses, newest first.
    * Index used: reimbursements.employee_id
+   *
+   * Includes the submitting employee's basic info so the response shape
+   * is consistent with RM / APE / CFO listing queries.
    *
    * @param {string} employeeId
    * @param {{ page?: number, limit?: number }} opts
@@ -57,9 +70,18 @@ class ReimbursementRepository extends BaseRepository {
   async findByEmployee(employeeId, { page = 1, limit = 50 } = {}) {
     return this.model.findAndCountAll({
       where: { employeeId },
+      include: [
+        {
+          model: User,
+          as: 'employee',
+          attributes: ['id', 'name', 'email', 'role'],
+          required: false,
+        },
+      ],
       order: [['created_at', 'DESC']],
       limit,
       offset: (page - 1) * limit,
+      distinct: true,
     });
   }
 
@@ -171,9 +193,18 @@ class ReimbursementRepository extends BaseRepository {
     // Step 2 – fetch claims (indexed on employee_id)
     return this.model.findAndCountAll({
       where: { employeeId: targetEmployeeId },
+      include: [
+        {
+          model: User,
+          as: 'employee',
+          attributes: ['id', 'name', 'email', 'role'],
+          required: false,
+        },
+      ],
       order: [['created_at', 'DESC']],
       limit,
       offset: (page - 1) * limit,
+      distinct: true,
     });
   }
 

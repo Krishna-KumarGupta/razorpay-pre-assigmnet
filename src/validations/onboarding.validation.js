@@ -37,6 +37,10 @@ const passwordField = body('password')
 
 /**
  * POST /rest/onboardings/register
+ *
+ * NOTE: `role` is intentionally NOT accepted here.
+ * All registrations create EMP accounts only.
+ * Role elevation requires POST /rest/roles/assign (CFO-gated).
  */
 const registerSchema = [
   body('name')
@@ -50,11 +54,6 @@ const registerSchema = [
   emailField,
 
   passwordField,
-
-  body('role')
-    .optional()
-    .isIn(['EMP', 'RM', 'APE', 'CFO'])
-    .withMessage('Role must be one of: EMP, RM, APE, CFO'),
 ];
 
 /**

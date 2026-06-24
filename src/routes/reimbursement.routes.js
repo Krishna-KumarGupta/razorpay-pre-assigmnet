@@ -89,10 +89,9 @@ router.get(
  *                                                    └─[CFO REJECTED]──► CFO_REJECTED (terminal)
  */
 router.patch(
-  '/:id/approve',
+  '/',
   authenticate,
   authorize('RM', 'APE', 'CFO'),
-  [param('id').isUUID(4).withMessage('id must be a valid UUID v4')],
   approveReimbursementSchema,
   validate,
   approvalController.approve

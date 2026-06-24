@@ -1,7 +1,7 @@
 'use strict';
 
 const BaseRepository = require('./base.repository');
-const User = require('../models/user.model');
+const { User } = require('../models');
 
 /**
  * UserRepository – data-access layer for the User model.

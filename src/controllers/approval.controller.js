@@ -28,18 +28,17 @@ class ApprovalController {
   approve = asyncHandler(async (req, res) => {
     const approverId   = req.user.id;
     const approverRole = req.user.role;
-    const reimbursementId = req.params.id;
-    const { action, remarks } = req.body;
+    const { userId, status, remarks } = req.body;
 
     const result = await approvalService.processApproval(
       approverId,
       approverRole,
-      reimbursementId,
-      action,
+      userId,
+      status,
       remarks
     );
 
-    const verb = action === 'APPROVED' ? 'approved' : 'rejected';
+    const verb = status === 'APPROVED' ? 'approved' : 'rejected';
     return sendSuccess(
       res,
       result,

@@ -54,7 +54,7 @@ const dbConfig = {
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false,
+        rejectUnauthorized: true,  // Enforce TLS cert validation — never disable in production
       },
     },
   },

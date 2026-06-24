@@ -88,14 +88,23 @@ class ApprovalService {
    *   newStatus: string,
    * }>}
    */
-  async processApproval(approverId, approverRole, reimbursementId, action, remarks) {
+  async processApproval(approverId, approverRole, employeeId, action, remarks) {
 
-    // 1. Load the claim
-    const reimbursement = await reimbursementRepository.findReimbursementById(reimbursementId);
-    if (!reimbursement) {
-      throw new NotFoundError(`Reimbursement "${reimbursementId}" not found.`);
+    // Get the gate definition for this approver's role
+    const gate = ApprovalService.GATES[approverRole];
+    if (!gate) {
+      throw new ForbiddenError(`Role "${approverRole}" is not permitted to approve reimbursements.`);
     }
 
+    // Load the claim matching the employee and required gate status
+    const reimbursement = await reimbursementRepository.findPendingByEmployeeAndStatus(employeeId, gate.requiredStatus);
+    if (!reimbursement) {
+      throw new NotFoundError(
+        `Reimbursement for employee "${employeeId}" with status "${gate.requiredStatus}" not found.`
+      );
+    }
+
+    const reimbursementId = reimbursement.id;
     const currentStatus = reimbursement.status;
 
     // 2. Reject actions on terminal claims
@@ -107,28 +116,21 @@ class ApprovalService {
       );
     }
 
-    // 3. Get the gate definition for this approver's role
-    const gate = ApprovalService.GATES[approverRole];
-    if (!gate) {
-      throw new ForbiddenError(`Role "${approverRole}" is not permitted to approve reimbursements.`);
-    }
-
-    // 4. Status must match what this role expects to act on
-    if (currentStatus !== gate.requiredStatus) {
-      throw new BadRequestError(
-        `A ${approverRole} can only act on claims with status "${gate.requiredStatus}". ` +
-        `Current status: "${currentStatus}".`,
-        'WRONG_APPROVAL_STAGE'
-      );
-    }
-
-    // 5. Duplicate approval guard (RM and APE may not approve twice at their level)
+    // 5. Duplicate-approval guard
+    //    RM:  may not approve their own reimbursement twice at the RM level.
+    //    APE: each individual APE may not act twice, but a *different* APE CAN still
+    //         approve — the spec requires "at least one APE approved", not "only one APE".
+    //    CFO: no duplicate guard needed (only one CFO in the system).
     if (approverRole !== 'CFO') {
-      const alreadyActed = await approvalRepository.findLatestByLevel(reimbursementId, gate.level);
+      const alreadyActed = await approvalRepository.findByApproverAndLevel(
+        reimbursementId,
+        approverId,
+        gate.level
+      );
       if (alreadyActed) {
         throw new BadRequestError(
-          `A ${approverRole} has already acted on this reimbursement ` +
-          `(action: ${alreadyActed.action}). Duplicate actions are not allowed.`,
+          `You have already ${alreadyActed.action.toLowerCase()} this reimbursement. ` +
+          `Duplicate actions by the same approver are not allowed.`,
           'DUPLICATE_APPROVAL'
         );
       }

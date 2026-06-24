@@ -3,16 +3,19 @@
 const { body } = require('express-validator');
 
 /**
- * Validation for PATCH /rest/reimbursements/:id/approve
- *
- * Data-shape only. Role guards (RM | APE | CFO) enforced by middleware.
+ * Validation for PATCH /rest/reimbursements
  */
 const approveReimbursementSchema = [
-  body('action')
+  body('userId')
     .trim()
-    .notEmpty().withMessage('action is required')
+    .notEmpty().withMessage('userId is required')
+    .isUUID(4).withMessage('userId must be a valid UUID v4'),
+
+  body('status')
+    .trim()
+    .notEmpty().withMessage('status is required')
     .isIn(['APPROVED', 'REJECTED'])
-    .withMessage('action must be either APPROVED or REJECTED'),
+    .withMessage('status must be either APPROVED or REJECTED'),
 
   body('remarks')
     .optional()
