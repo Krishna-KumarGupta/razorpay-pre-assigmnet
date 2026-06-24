@@ -102,3 +102,21 @@ Route layer
 Follow SOLID principles.
 
 Do not implement RBAC yet.
+
+
+Prompt 4 — CFO Seeder
+Create Sequelize seed file.
+
+Seed exactly one CFO account.
+
+Email:
+cfo@org.com
+
+Password:
+CFO#ORG@April2026
+
+Store password as bcrypt hash.
+
+Prevent duplicate seed creation.
+
+Generate seed file only.
