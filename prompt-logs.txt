@@ -1,0 +1,43 @@
+Prompt 1 — Project Initialization
+You are a senior backend engineer.
+
+Create a production-grade backend project using:
+
+- Node.js
+- Express.js
+- PostgreSQL (local installation)
+- Sequelize ORM
+- Cookie based authentication
+- JWT stored inside HttpOnly cookies
+
+Follow SOLID principles.
+
+Create only the initial project structure.
+
+Do not implement business logic yet.
+
+Create:
+
+src/
+├── config
+├── controllers
+├── services
+├── repositories
+├── middleware
+├── routes
+├── models
+├── migrations
+├── seeders
+├── utils
+├── validations
+
+Configure:
+- Express
+- PostgreSQL connection
+- Sequelize initialization
+- Environment variables
+- Error handling middleware
+
+The application must run on port 7002.
+
+Return folder structure and code files.

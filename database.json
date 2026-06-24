@@ -1,0 +1,29 @@
+{
+  "development": {
+    "username": "postgres",
+    "password": "your_password_here",
+    "database": "razorpay_db",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "dialect": "postgres",
+    "logging": false
+  },
+  "test": {
+    "username": "postgres",
+    "password": "your_password_here",
+    "database": "razorpay_db_test",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "dialect": "postgres",
+    "logging": false
+  },
+  "production": {
+    "username": "postgres",
+    "password": "your_password_here",
+    "database": "razorpay_db_prod",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "dialect": "postgres",
+    "logging": false
+  }
+}

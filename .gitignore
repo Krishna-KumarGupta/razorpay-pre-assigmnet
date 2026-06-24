@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.env
+*.log
+logs/
+coverage/
+.nyc_output/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
