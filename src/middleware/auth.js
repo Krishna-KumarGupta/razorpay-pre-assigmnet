@@ -28,11 +28,14 @@ const authenticate = asyncHandler(async (req, _res, next) => {
  * authorize – role-based access control (RBAC) gate.
  * Must be used AFTER authenticate.
  *
- * @param {...string} roles - Allowed roles (e.g. 'admin', 'user')
+ * Enforces that req.user.role is one of the allowed roles.
+ * Throws 403 Forbidden with a clear message on mismatch.
+ *
+ * @param {...string} roles - Allowed roles: 'EMP' | 'RM' | 'APE' | 'CFO'
  * @returns {Function} Express middleware
  *
  * Usage:
- *   router.delete('/users/:id', authenticate, authorize('admin'), controller.handler);
+ *   router.post('/roles/assign', authenticate, authorize('CFO'), controller.handler);
  */
 const authorize = (...roles) =>
   asyncHandler(async (req, _res, next) => {
@@ -42,12 +45,24 @@ const authorize = (...roles) =>
 
     if (!roles.includes(req.user.role)) {
       throw new ForbiddenError(
-        `Access denied. Required role(s): ${roles.join(', ')}. Your role: ${req.user.role}`
+        `Access denied. Required role(s): [${roles.join(', ')}]. ` +
+        `Your role: ${req.user.role}.`
       );
     }
 
     next();
   });
+
+/**
+ * requireCFO – convenience alias for authorize('CFO').
+ *
+ * Makes route declarations self-documenting:
+ *   router.post('/assign', authenticate, requireCFO, controller.handler);
+ *
+ * Semantically clearer than a generic authorize call when only CFO access
+ * is needed, and eliminates the risk of accidentally passing the wrong string.
+ */
+const requireCFO = authorize('CFO');
 
 /**
  * optionalAuthenticate – like authenticate but does NOT fail if no token is present.
@@ -68,4 +83,4 @@ const optionalAuthenticate = asyncHandler(async (req, _res, next) => {
   next();
 });
 
-module.exports = { authenticate, authorize, optionalAuthenticate };
+module.exports = { authenticate, authorize, requireCFO, optionalAuthenticate };

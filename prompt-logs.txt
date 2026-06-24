@@ -120,3 +120,35 @@ Store password as bcrypt hash.
 Prevent duplicate seed creation.
 
 Generate seed file only.
+
+
+Prompt 5 — Role Assignment Service
+Implement:
+
+POST /rest/roles/assign
+
+Requirements:
+
+Only CFO can access.
+
+Body:
+{
+ userId,
+ role
+}
+
+Allowed roles:
+
+EMP
+RM
+APE
+CFO
+
+Generate:
+
+middleware
+service
+repository
+controller
+
+Follow RBAC principles.
