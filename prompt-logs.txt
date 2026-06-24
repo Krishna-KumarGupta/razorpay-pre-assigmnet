@@ -41,3 +41,64 @@ Configure:
 The application must run on port 7002.
 
 Return folder structure and code files.
+
+Prompt 2 — Database Design
+Using Sequelize and PostgreSQL.
+
+Create models and migrations for:
+
+User
+EmployeeManager
+Reimbursement
+ReimbursementApproval
+
+Requirements:
+
+User roles:
+EMP
+RM
+APE
+CFO
+
+Every employee reports to one RM.
+
+A reimbursement belongs to an employee.
+
+Approval history must be stored separately.
+
+Generate:
+
+- Sequelize models
+- Associations
+- Migration files
+
+Do not generate controllers or routes.
+
+
+Prompt 3 — Authentication Module
+Implement Authentication Service.
+
+Requirements:
+
+POST /rest/onboardings/register
+POST /rest/onboardings/login
+POST /rest/onboardings/logout
+
+Constraints:
+
+- Only org.com email domain
+- Password hashing using bcrypt
+- JWT generation
+- JWT stored inside HttpOnly cookie
+- Logout clears cookie
+
+Generate:
+
+Repository layer
+Service layer
+Controller layer
+Route layer
+
+Follow SOLID principles.
+
+Do not implement RBAC yet.

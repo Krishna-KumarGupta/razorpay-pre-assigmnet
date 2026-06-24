@@ -9,7 +9,8 @@ const cookieParser = require('cookie-parser');
 const createError = require('http-errors');
 
 const corsOptions = require('./config/cors');
-const routes = require('./routes');
+const routes = require('./routes');           // /api/v1 prefix
+const restRoutes = require('./routes/rest');  // /rest    prefix
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
 
@@ -48,7 +49,8 @@ app.get('/health', (_req, res) => {
 });
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
-app.use('/api/v1', routes);
+app.use('/api/v1', routes);      // Legacy/internal API namespace
+app.use('/rest', restRoutes);    // REST namespace: /rest/onboardings, etc.
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use(notFoundHandler);
