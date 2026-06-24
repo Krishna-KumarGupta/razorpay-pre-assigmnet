@@ -4,16 +4,18 @@ const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 /**
- * User model – represents an application user.
+ * User model – represents any system user.
  *
- * Follows the class-based Sequelize v6 pattern for full TypeScript-style clarity.
- * Business logic (hashing, validation) lives in the Service layer, NOT here.
- * The model only defines the schema and database-level constraints.
+ * Roles:
+ *  EMP  – Employee: submits reimbursements
+ *  RM   – Reporting Manager: first-level approver; manages a set of EMPs
+ *  APE  – Accounts Payable Executive: second-level approver
+ *  CFO  – Chief Financial Officer: final approver
  */
 class User extends Model {
   /**
    * Check whether the user has a specific role.
-   * @param {string} role
+   * @param {string} role - One of EMP | RM | APE | CFO
    * @returns {boolean}
    */
   hasRole(role) {
@@ -22,7 +24,6 @@ class User extends Model {
 
   /**
    * Return a safe representation of the user (strips sensitive fields).
-   * Called automatically by JSON.stringify via toJSON override.
    * @returns {object}
    */
   toSafeObject() {
@@ -68,9 +69,10 @@ User.init(
       },
     },
     role: {
-      type: DataTypes.ENUM('admin', 'user'),
+      type: DataTypes.ENUM('EMP', 'RM', 'APE', 'CFO'),
       allowNull: false,
-      defaultValue: 'user',
+      defaultValue: 'EMP',
+      comment: 'EMP=Employee | RM=Reporting Manager | APE=Accounts Payable Exec | CFO=Chief Financial Officer',
     },
     isActive: {
       type: DataTypes.BOOLEAN,
@@ -99,9 +101,9 @@ User.init(
     sequelize,
     tableName: 'users',
     modelName: 'User',
-    timestamps: true,                 // Adds createdAt / updatedAt
-    paranoid: false,                  // Set to true to enable soft-deletes (deletedAt)
-    underscored: true,                // Maps camelCase fields to snake_case columns
+    timestamps: true,
+    paranoid: false,
+    underscored: true,
     indexes: [
       { unique: true, fields: ['email'] },
       { fields: ['role'] },
@@ -111,15 +113,11 @@ User.init(
       attributes: { exclude: ['password', 'refreshToken'] },
     },
     scopes: {
-      withPassword: {
-        attributes: { include: ['password'] },
-      },
-      withRefreshToken: {
-        attributes: { include: ['refreshToken'] },
-      },
-      active: {
-        where: { isActive: true },
-      },
+      withPassword: { attributes: { include: ['password'] } },
+      withRefreshToken: { attributes: { include: ['refreshToken'] } },
+      active: { where: { isActive: true } },
+      employees: { where: { role: 'EMP' } },
+      managers: { where: { role: 'RM' } },
     },
   }
 );
