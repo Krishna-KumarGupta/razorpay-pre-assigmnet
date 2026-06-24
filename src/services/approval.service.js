@@ -140,10 +140,10 @@ class ApprovalService {
     // 7. Wrap both DB writes in a transaction
     const result = await sequelize.transaction(async (t) => {
 
-      // 7a. Update the reimbursement status
-      await reimbursementRepository.updateStatus(reimbursementId, newStatus);
+      // 7a. Update the reimbursement status (atomic with the audit log insert)
+      await reimbursementRepository.updateStatus(reimbursementId, newStatus, t);
 
-      // 7b. Insert immutable approval record
+      // 7b. Insert immutable approval record (same transaction as 7a)
       const approvalRecord = await approvalRepository.recordApproval({
         reimbursementId,
         approverId,
@@ -152,7 +152,7 @@ class ApprovalService {
         remarks,
         previousStatus: currentStatus,
         newStatus,
-      });
+      }, t);
 
       return approvalRecord;
     });

@@ -23,6 +23,9 @@ class ApprovalRepository extends BaseRepository {
    * Record a single approval action.
    * Called every time an approver acts on a reimbursement.
    *
+   * Accepts an optional Sequelize transaction so that this insert can be
+   * bundled atomically with the reimbursement status update in ApprovalService.
+   *
    * @param {{
    *   reimbursementId: string,
    *   approverId:      string,
@@ -32,19 +35,23 @@ class ApprovalRepository extends BaseRepository {
    *   previousStatus:  string,
    *   newStatus:       string,
    * }} data
+   * @param {import('sequelize').Transaction} [transaction]
    * @returns {Promise<ReimbursementApproval>}
    */
-  async recordApproval(data) {
-    return this.model.create({
-      reimbursementId: data.reimbursementId,
-      approverId:      data.approverId,
-      approvalLevel:   data.approvalLevel,
-      action:          data.action,
-      remarks:         data.remarks || null,
-      actionAt:        new Date(),
-      previousStatus:  data.previousStatus,
-      newStatus:       data.newStatus,
-    });
+  async recordApproval(data, transaction = null) {
+    return this.model.create(
+      {
+        reimbursementId: data.reimbursementId,
+        approverId:      data.approverId,
+        approvalLevel:   data.approvalLevel,
+        action:          data.action,
+        remarks:         data.remarks || null,
+        actionAt:        new Date(),
+        previousStatus:  data.previousStatus,
+        newStatus:       data.newStatus,
+      },
+      transaction ? { transaction } : {}
+    );
   }
 
   // ─── Read ──────────────────────────────────────────────────────────────────

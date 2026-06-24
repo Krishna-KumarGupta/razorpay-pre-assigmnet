@@ -253,3 +253,32 @@ EMP:
 Forbidden.
 
 Generate optimized queries.
+
+
+
+Prompt 10 — Reimbursement Listing
+Implement:
+
+GET /rest/reimbursements
+
+Visibility:
+
+EMP:
+Own reimbursements
+
+RM:
+Pending reimbursements from direct reports
+
+APE:
+Pending reimbursements approved by RM
+
+CFO:
+Reimbursements approved by APE
+
+Also implement:
+
+GET /rest/reimbursements/:userId
+
+Only when target user is direct subordinate.
+
+Generate optimized Sequelize queries.
