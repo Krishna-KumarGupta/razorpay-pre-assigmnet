@@ -4,17 +4,23 @@ require('dotenv').config();
 const { Sequelize } = require('sequelize');
 const logger = require('../utils/logger');
 
+const isLocal = process.env.DATABASE_URL &&
+  (process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1'));
+
+const sslConfig = isLocal
+  ? false
+  : {
+      require: true,
+      rejectUnauthorized: false,
+    };
+
 /**
  * Database configuration object keyed by environment.
  * Reads values from environment variables so nothing sensitive is hardcoded.
  */
 const dbConfig = {
   development: {
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || null,
-    database: process.env.DB_NAME || 'razorpay_db',
-    host: process.env.DB_HOST || '127.0.0.1',
-    port: parseInt(process.env.DB_PORT, 10) || 5432,
+    use_env_variable: 'DATABASE_URL',
     dialect: 'postgres',
     logging: (msg) => logger.debug(msg),
     pool: {
@@ -25,24 +31,20 @@ const dbConfig = {
     },
     dialectOptions: {
       connectTimeout: 20000,
+      ...(sslConfig ? { ssl: sslConfig } : {}),
     },
   },
   test: {
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || null,
-    database: process.env.DB_NAME + '_test' || 'razorpay_db_test',
-    host: process.env.DB_HOST || '127.0.0.1',
-    port: parseInt(process.env.DB_PORT, 10) || 5432,
+    use_env_variable: 'DATABASE_URL',
     dialect: 'postgres',
     logging: false,
     pool: { max: 5, min: 0, acquire: 30000, idle: 10000 },
+    dialectOptions: {
+      ...(sslConfig ? { ssl: sslConfig } : {}),
+    },
   },
   production: {
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT, 10) || 5432,
+    use_env_variable: 'DATABASE_URL',
     dialect: 'postgres',
     logging: false,
     pool: {
@@ -52,10 +54,7 @@ const dbConfig = {
       idle: 10000,
     },
     dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: true,  // Enforce TLS cert validation — never disable in production
-      },
+      ...(sslConfig ? { ssl: sslConfig } : {}),
     },
   },
 };
@@ -63,15 +62,14 @@ const dbConfig = {
 const env = process.env.NODE_ENV || 'development';
 const config = dbConfig[env];
 
+if (!process.env.DATABASE_URL) {
+  logger.error('❌ DATABASE_URL environment variable is not defined!');
+}
+
 /**
  * Singleton Sequelize instance shared across the application.
  */
-const sequelize = new Sequelize(
-  config.database,
-  config.username,
-  config.password,
-  config
-);
+const sequelize = new Sequelize(process.env.DATABASE_URL || '', config);
 
 /**
  * Authenticate and verify the database connection.
@@ -81,7 +79,16 @@ const sequelize = new Sequelize(
 async function connectDatabase() {
   try {
     await sequelize.authenticate();
-    logger.info(`✅ PostgreSQL connected: ${config.host}:${config.port}/${config.database}`);
+    let connectionInfo = 'Supabase PostgreSQL';
+    if (process.env.DATABASE_URL) {
+      try {
+        const parsedUrl = new URL(process.env.DATABASE_URL);
+        connectionInfo = `${parsedUrl.host}${parsedUrl.pathname}`;
+      } catch (e) {
+        // ignore
+      }
+    }
+    logger.info(`✅ PostgreSQL connected: ${connectionInfo}`);
 
     if (process.env.NODE_ENV === 'development') {
       // Sync models in development (alter: true is safe for dev, never use in production)
