@@ -56,6 +56,7 @@ function onListening() {
 async function startServer() {
   try {
     // Initialize database connection
+    console.log(require('./config/database'));
     await connectDatabase();
 
     const port = normalizePort(PORT);
