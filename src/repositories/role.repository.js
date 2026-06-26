@@ -1,51 +1,42 @@
 'use strict';
 
+const { eq } = require('drizzle-orm');
 const BaseRepository = require('./base.repository');
-const { User } = require('../models');
+const { users } = require('../db/schema');
+const { User } = require('../db/models');
 
 /**
  * RoleRepository – data-access layer for role-assignment operations.
- *
- * Separated from UserRepository (Single Responsibility Principle):
- *  - UserRepository  → auth queries (find by email, refresh token management)
- *  - RoleRepository  → role mutation queries (assign, fetch for role checks)
- *
- * All raw Sequelize calls are confined here so the Service layer stays
- * ORM-agnostic and testable.
  */
 class RoleRepository extends BaseRepository {
   constructor() {
-    super(User);
+    super(users, User);
   }
 
   /**
-   * Find a user by primary key (default scope – no password).
-   * Used to confirm the target user exists before mutating their role.
-   *
+   * Find a user by primary key.
    * @param {string} userId
    * @returns {Promise<User|null>}
    */
   async findById(userId) {
-    return this.model.findByPk(userId);
+    const rows = await this.db.select().from(users).where(eq(users.id, userId));
+    return rows[0] ? new User(rows[0]) : null;
   }
 
   /**
    * Update the role of a single user.
-   *
-   * Returns the number of affected rows so the caller can detect
-   * "user not found" (0 rows) vs success (1 row).
-   *
    * @param {string} userId
-   * @param {string} newRole  - One of: EMP | RM | APE | CFO
-   * @returns {Promise<[affectedCount: number]>}
+   * @param {string} newRole
+   * @returns {Promise<any>}
    */
   async assignRole(userId, newRole) {
-    return this.model.update(
-      { role: newRole },
-      { where: { id: userId } }
-    );
+    return this.db.update(users)
+      .set({
+        role: newRole,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 }
 
-// Singleton – one instance shared across the service layer
 module.exports = new RoleRepository();

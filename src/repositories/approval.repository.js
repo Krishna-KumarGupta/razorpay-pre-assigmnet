@@ -1,135 +1,128 @@
 'use strict';
 
+const { eq, and, asc, desc } = require('drizzle-orm');
 const BaseRepository = require('./base.repository');
-const { ReimbursementApproval } = require('../models');
+const { reimbursementApprovals } = require('../db/schema');
+const { ReimbursementApproval } = require('../db/models');
 
 /**
  * ApprovalRepository – data-access layer for the ReimbursementApproval model.
- *
- * Single Responsibility:
- *  – Inserts immutable approval audit rows.
- *  – Queries approval history to support the state-machine rules in the service.
- *
- * Rows are INSERT-only by convention; never UPDATE or DELETE.
  */
 class ApprovalRepository extends BaseRepository {
   constructor() {
-    super(ReimbursementApproval);
+    super(reimbursementApprovals, ReimbursementApproval);
   }
 
   // ─── Write ─────────────────────────────────────────────────────────────────
 
   /**
    * Record a single approval action.
-   * Called every time an approver acts on a reimbursement.
-   *
-   * Accepts an optional Sequelize transaction so that this insert can be
-   * bundled atomically with the reimbursement status update in ApprovalService.
-   *
-   * @param {{
-   *   reimbursementId: string,
-   *   approverId:      string,
-   *   approvalLevel:   'RM' | 'APE' | 'CFO',
-   *   action:          'APPROVED' | 'REJECTED',
-   *   remarks?:        string,
-   *   previousStatus:  string,
-   *   newStatus:       string,
-   * }} data
-   * @param {import('sequelize').Transaction} [transaction]
+   * @param {object} data
+   * @param {object} [transaction] - Drizzle transaction context (tx)
    * @returns {Promise<ReimbursementApproval>}
    */
   async recordApproval(data, transaction = null) {
-    return this.model.create(
-      {
-        reimbursementId: data.reimbursementId,
-        approverId:      data.approverId,
-        approvalLevel:   data.approvalLevel,
-        action:          data.action,
-        remarks:         data.remarks || null,
-        actionAt:        new Date(),
-        previousStatus:  data.previousStatus,
-        newStatus:       data.newStatus,
-      },
-      transaction ? { transaction } : {}
-    );
+    const client = transaction || this.db;
+    const rows = await client.insert(reimbursementApprovals).values({
+      reimbursementId: data.reimbursementId,
+      approverId:      data.approverId,
+      approvalLevel:   data.approvalLevel,
+      action:          data.action,
+      remarks:         data.remarks || null,
+      actionAt:        new Date(),
+      previousStatus:  data.previousStatus,
+      newStatus:       data.newStatus,
+    }).returning();
+    return new ReimbursementApproval(rows[0]);
   }
 
   // ─── Read ──────────────────────────────────────────────────────────────────
 
   /**
    * Get the full approval history for a reimbursement, oldest-first.
-   * Used to display audit trail and to compute the current approval state.
-   *
    * @param {string} reimbursementId
    * @returns {Promise<ReimbursementApproval[]>}
    */
   async findByReimbursement(reimbursementId) {
-    return this.model.findAll({
-      where: { reimbursementId },
-      order: [['action_at', 'ASC']],
-    });
+    const rows = await this.db.select().from(reimbursementApprovals)
+      .where(eq(reimbursementApprovals.reimbursementId, reimbursementId))
+      .orderBy(asc(reimbursementApprovals.actionAt));
+    return rows.map((r) => new ReimbursementApproval(r));
   }
 
   /**
-   * Check whether a specific approval level has already been recorded
-   * for a reimbursement.  Used to prevent duplicate approvals from the same level.
-   *
+   * Check whether a specific approval level has already been recorded for a reimbursement.
    * @param {string} reimbursementId
-   * @param {'RM' | 'APE' | 'CFO'} level
-   * @param {'APPROVED' | 'REJECTED'} action
+   * @param {string} level
+   * @param {string} action
    * @returns {Promise<ReimbursementApproval|null>}
    */
   async findApprovalByLevel(reimbursementId, level, action) {
-    return this.model.findOne({
-      where: { reimbursementId, approvalLevel: level, action },
-    });
+    const rows = await this.db.select().from(reimbursementApprovals)
+      .where(
+        and(
+          eq(reimbursementApprovals.reimbursementId, reimbursementId),
+          eq(reimbursementApprovals.approvalLevel, level),
+          eq(reimbursementApprovals.action, action)
+        )
+      );
+    return rows[0] ? new ReimbursementApproval(rows[0]) : null;
   }
 
   /**
    * Check if any approval record at any level has action = REJECTED.
-   * Drives the "any rejection → terminal REJECTED" rule.
-   *
    * @param {string} reimbursementId
    * @returns {Promise<boolean>}
    */
   async hasAnyRejection(reimbursementId) {
-    const record = await this.model.findOne({
-      where: { reimbursementId, action: 'REJECTED' },
-    });
-    return !!record;
+    const rows = await this.db.select().from(reimbursementApprovals)
+      .where(
+        and(
+          eq(reimbursementApprovals.reimbursementId, reimbursementId),
+          eq(reimbursementApprovals.action, 'REJECTED')
+        )
+      );
+    return rows.length > 0;
   }
 
   /**
    * Fetch the most recent approval record for a given level.
-   *
    * @param {string} reimbursementId
-   * @param {'RM' | 'APE' | 'CFO'} level
+   * @param {string} level
    * @returns {Promise<ReimbursementApproval|null>}
    */
   async findLatestByLevel(reimbursementId, level) {
-    return this.model.findOne({
-      where: { reimbursementId, approvalLevel: level },
-      order: [['action_at', 'DESC']],
-    });
+    const rows = await this.db.select().from(reimbursementApprovals)
+      .where(
+        and(
+          eq(reimbursementApprovals.reimbursementId, reimbursementId),
+          eq(reimbursementApprovals.approvalLevel, level)
+        )
+      )
+      .orderBy(desc(reimbursementApprovals.actionAt))
+      .limit(1);
+    return rows[0] ? new ReimbursementApproval(rows[0]) : null;
   }
 
   /**
-   * Check if a specific approver has already acted on a reimbursement
-   * at a given approval level.
-   *
-   * Used to prevent the same person from submitting duplicate approval actions.
-   * Different APEs are each allowed to approve independently.
-   *
+   * Check if a specific approver has already acted on a reimbursement at a given approval level.
    * @param {string} reimbursementId
    * @param {string} approverId
-   * @param {'RM' | 'APE' | 'CFO'} level
+   * @param {string} level
    * @returns {Promise<ReimbursementApproval|null>}
    */
   async findByApproverAndLevel(reimbursementId, approverId, level) {
-    return this.model.findOne({
-      where: { reimbursementId, approverId, approvalLevel: level },
-      order: [['action_at', 'DESC']],
-    });
+    const rows = await this.db.select().from(reimbursementApprovals)
+      .where(
+        and(
+          eq(reimbursementApprovals.reimbursementId, reimbursementId),
+          eq(reimbursementApprovals.approverId, approverId),
+          eq(reimbursementApprovals.approvalLevel, level)
+        )
+      )
+      .orderBy(desc(reimbursementApprovals.actionAt))
+      .limit(1);
+    return rows[0] ? new ReimbursementApproval(rows[0]) : null;
   }
 }
 

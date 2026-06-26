@@ -3,7 +3,18 @@
 require('dotenv').config();
 const http = require('http');
 const app = require('./app');
-const { connectDatabase, sequelize } = require('./config/database');
+const { db, client } = require('./db/db');
+const { sql } = require('drizzle-orm');
+
+async function connectDatabase() {
+  try {
+    await db.execute(sql`SELECT 1`);
+    logger.info(`✅ PostgreSQL connected successfully via Drizzle`);
+  } catch (error) {
+    logger.error('❌ Unable to connect to the database:', error);
+    throw error;
+  }
+}
 const logger = require('./utils/logger');
 
 const PORT = process.env.PORT || 7002;
@@ -56,7 +67,7 @@ function onListening() {
 async function startServer() {
   try {
     // Initialize database connection
-    console.log(require('./config/database'));
+
     await connectDatabase();
 
     const port = normalizePort(PORT);
@@ -77,7 +88,7 @@ async function startServer() {
       server.close(async () => {
         logger.info('HTTP server closed.');
         try {
-          await sequelize.close();
+          await client.end();
           logger.info('Database connection pool closed.');
         } catch (err) {
           logger.error('Error closing database pool:', err);

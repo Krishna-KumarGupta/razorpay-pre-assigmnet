@@ -1,39 +1,39 @@
 'use strict';
 
+const { eq, and } = require('drizzle-orm');
 const BaseRepository = require('./base.repository');
-const { User } = require('../models');
+const { users } = require('../db/schema');
+const { User } = require('../db/models');
 
 /**
  * UserRepository – data-access layer for the User model.
- *
- * Only query-building logic lives here.
- * Business rules (hashing, token rotation, etc.) belong in the Service layer.
  */
 class UserRepository extends BaseRepository {
   constructor() {
-    super(User);
+    super(users, User);
   }
 
   // ─── Read ──────────────────────────────────────────────────────────────────
 
   /**
    * Find a user by email address.
-   * Uses the default scope – password field is excluded.
    * @param {string} email
    * @returns {Promise<User|null>}
    */
   async findByEmail(email) {
-    return this.model.findOne({ where: { email } });
+    const rows = await this.db.select().from(users).where(eq(users.email, email));
+    return rows[0] ? new User(rows[0]) : null;
   }
 
   /**
    * Find a user by email AND include the hashed password column.
-   * Should be called ONLY during credential verification (login).
    * @param {string} email
    * @returns {Promise<User|null>}
    */
   async findByEmailWithPassword(email) {
-    return this.model.scope('withPassword').findOne({ where: { email } });
+    // Drizzle selects all columns by default
+    const rows = await this.db.select().from(users).where(eq(users.email, email));
+    return rows[0] ? new User(rows[0]) : null;
   }
 
   /**
@@ -42,51 +42,63 @@ class UserRepository extends BaseRepository {
    * @returns {Promise<User|null>}
    */
   async findActiveById(id) {
-    return this.model.scope('active').findByPk(id);
+    const rows = await this.db.select().from(users).where(
+      and(eq(users.id, id), eq(users.isActive, true))
+    );
+    return rows[0] ? new User(rows[0]) : null;
   }
 
   // ─── Write ─────────────────────────────────────────────────────────────────
 
   /**
    * Persist the hashed refresh token and update lastLoginAt.
-   * Called after a successful login to bind the session to this device.
-   *
    * @param {string} userId
-   * @param {string} hashedRefreshToken  - bcrypt hash of the raw refresh token
-   * @returns {Promise<[number]>}
+   * @param {string} hashedRefreshToken
+   * @returns {Promise<any>}
    */
   async updateRefreshToken(userId, hashedRefreshToken) {
-    return this.model.update(
-      {
+    return this.db.update(users)
+      .set({
         refreshToken: hashedRefreshToken,
         lastLoginAt: new Date(),
-      },
-      { where: { id: userId } }
-    );
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   /**
-   * Clear the stored refresh token (logout / token rotation invalidation).
+   * Clear the stored refresh token.
    * @param {string} userId
-   * @returns {Promise<[number]>}
+   * @returns {Promise<any>}
    */
   async clearRefreshToken(userId) {
-    return this.model.update(
-      { refreshToken: null },
-      { where: { id: userId } }
-    );
+    return this.db.update(users)
+      .set({
+        refreshToken: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   /**
    * Find a user by id and include the stored refresh token.
-   * Used during token rotation to verify the incoming refresh token matches.
    * @param {string} userId
    * @returns {Promise<User|null>}
    */
   async findByIdWithRefreshToken(userId) {
-    return this.model.scope('withRefreshToken').findByPk(userId);
+    const rows = await this.db.select().from(users).where(eq(users.id, userId));
+    return rows[0] ? new User(rows[0]) : null;
+  }
+
+  /**
+   * Create a new user.
+   * @param {object} data
+   * @returns {Promise<User>}
+   */
+  async create(data) {
+    const rows = await this.db.insert(users).values(data).returning();
+    return new User(rows[0]);
   }
 }
 
-// Export singleton – avoids multiple instantiations across the app
 module.exports = new UserRepository();

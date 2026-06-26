@@ -1,6 +1,6 @@
 'use strict';
 
-const { Sequelize } = require('sequelize');
+
 const { AppError } = require('../utils/errors');
 const logger = require('../utils/logger');
 
@@ -33,43 +33,34 @@ const errorHandler = (err, req, res, _next) => {
   let message = err.message || 'An unexpected error occurred';
   let details = err.details || null;
 
-  // ── Sequelize Validation Error ──────────────────────────────────────────────
-  if (err instanceof Sequelize.ValidationError) {
-    statusCode = 422;
-    code = 'VALIDATION_ERROR';
-    message = 'Validation failed';
-    details = err.errors.map((e) => ({
-      field: e.path,
-      message: e.message,
-      value: e.value,
-    }));
-  }
-
-  // ── Sequelize Unique Constraint Error ───────────────────────────────────────
-  if (err instanceof Sequelize.UniqueConstraintError) {
-    statusCode = 409;
-    code = 'CONFLICT';
-    message = 'A record with the provided data already exists';
-    details = err.errors.map((e) => ({
-      field: e.path,
-      message: e.message,
-    }));
-  }
-
-  // ── Sequelize Foreign Key Constraint Error ──────────────────────────────────
-  if (err instanceof Sequelize.ForeignKeyConstraintError) {
-    statusCode = 409;
-    code = 'FOREIGN_KEY_CONSTRAINT';
-    message = 'Operation violates a foreign key constraint';
-  }
-
-  // ── Sequelize Database Error (connection issues, query failures, etc.) ────────
-  // This catches generic DB errors (e.g. connection pool exhaustion, bad queries).
-  // We intentionally suppress the raw message to prevent DB internals from leaking.
-  if (err instanceof Sequelize.DatabaseError && !(err instanceof Sequelize.ValidationError) && !(err instanceof Sequelize.UniqueConstraintError) && !(err instanceof Sequelize.ForeignKeyConstraintError)) {
-    statusCode = 503;
-    code = 'DATABASE_ERROR';
-    message = 'A database error occurred. Please try again later.';
+  // ── PostgreSQL Driver / Database Errors ─────────────────────────────────────
+  if (err && err.code) {
+    // Unique Constraint Violation
+    if (err.code === '23505') {
+      statusCode = 409;
+      code = 'CONFLICT';
+      message = 'A record with the provided data already exists';
+      if (err.detail) {
+        const match = err.detail.match(/Key \((.*?)\)=/);
+        const field = match ? match[1] : 'field';
+        details = [{
+          field,
+          message: err.detail,
+        }];
+      }
+    }
+    // Foreign Key Violation
+    else if (err.code === '23503') {
+      statusCode = 409;
+      code = 'FOREIGN_KEY_CONSTRAINT';
+      message = 'Operation violates a foreign key constraint';
+    }
+    // General Database Error (e.g. from postgres-js driver)
+    else if (err.severity) {
+      statusCode = 503;
+      code = 'DATABASE_ERROR';
+      message = 'A database error occurred. Please try again later.';
+    }
   }
 
   // ── JWT Errors ───────────────────────────────────────────────────────────────

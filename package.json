@@ -4,14 +4,12 @@
   "description": "Production-grade Node.js backend with Express, PostgreSQL, Sequelize, and JWT cookie-based authentication",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "db:migrate": "npx sequelize-cli db:migrate",
-    "db:migrate:undo": "npx sequelize-cli db:migrate:undo",
-    "db:seed": "npx sequelize-cli db:seed:all",
-    "db:seed-data": "npx sequelize-cli db:seed --seed 20240101000002-seed-cfo-account.js",
-    "db:seed:undo": "npx sequelize-cli db:seed:undo:all",
-    "db:reset": "npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all",
+    "start": "tsx src/server.js",
+    "dev": "tsx watch src/server.js",
+    "db:generate": "npx drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:push": "npx drizzle-kit push",
+    "db:seed": "tsx src/db/seed.ts",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"
   },
@@ -20,6 +18,7 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.45.2",
     "express": "^4.19.2",
     "express-rate-limit": "^8.5.2",
     "express-validator": "^7.2.0",
@@ -28,15 +27,15 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "pg": "^8.12.0",
-    "pg-hstore": "^2.3.4",
-    "sequelize": "^6.37.3",
+    "postgres": "^3.4.9",
     "uuid": "^10.0.0",
     "winston": "^3.13.0"
   },
   "devDependencies": {
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.9.0",
     "nodemon": "^3.1.4",
-    "sequelize-cli": "^6.6.2"
+    "tsx": "^4.22.4"
   },
   "engines": {
     "node": ">=18.0.0"

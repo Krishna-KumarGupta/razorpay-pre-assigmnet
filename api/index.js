@@ -4,11 +4,16 @@
 require('dotenv').config();
 
 const app = require('../src/app');
-const { connectDatabase } = require('../src/config/database');
+const { db } = require('../src/db/db');
+const { sql } = require('drizzle-orm');
 
 // Initialize database connection asynchronously
-connectDatabase().catch((err) => {
-  console.error('Database connection failed:', err);
-});
+db.execute(sql`SELECT 1`)
+  .then(() => {
+    console.log('✅ PostgreSQL connected successfully via Drizzle (Vercel serverless)');
+  })
+  .catch((err) => {
+    console.error('❌ Database connection failed (Vercel serverless):', err);
+  });
 
 module.exports = app;

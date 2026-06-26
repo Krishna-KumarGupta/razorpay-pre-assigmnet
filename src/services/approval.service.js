@@ -1,6 +1,6 @@
 'use strict';
 
-const { sequelize } = require('../config/database');
+const { db } = require('../db/db');
 const reimbursementRepository = require('../repositories/reimbursement.repository');
 const approvalRepository = require('../repositories/approval.repository');
 const { NotFoundError, BadRequestError, ForbiddenError } = require('../utils/errors');
@@ -140,10 +140,10 @@ class ApprovalService {
     const newStatus = action === 'APPROVED' ? gate.approvedStatus : gate.rejectedStatus;
 
     // 7. Wrap both DB writes in a transaction
-    const result = await sequelize.transaction(async (t) => {
+    const result = await db.transaction(async (tx) => {
 
       // 7a. Update the reimbursement status (atomic with the audit log insert)
-      await reimbursementRepository.updateStatus(reimbursementId, newStatus, t);
+      await reimbursementRepository.updateStatus(reimbursementId, newStatus, tx);
 
       // 7b. Insert immutable approval record (same transaction as 7a)
       const approvalRecord = await approvalRepository.recordApproval({
@@ -154,7 +154,7 @@ class ApprovalService {
         remarks,
         previousStatus: currentStatus,
         newStatus,
-      }, t);
+      }, tx);
 
       return approvalRecord;
     });
